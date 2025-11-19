@@ -1,0 +1,41 @@
+# Файлы/папки сборки CMake
+/build/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+
+# Сгенерированные исполняемые файлы/объекты
+*.o
+*.obj
+*.exe
+*.out
+*.app
+*.a
+*.so
+*.dll
+
+# Файлы IDE и временные
+*.user
+*.swp
+*.swo
+*.log
+.DS_Store
+.idea/
+.vscode/
+*.iml
+
+
+# Файлы тестовой генерации
+*.seed
+
+# Секреты и приватные ключи
+*.pem
+*.crt
+*.key
+
+# core dumps
+core.*
+
+# Другие возможные артефакты
+main
