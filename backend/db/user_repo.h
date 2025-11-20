@@ -2,16 +2,18 @@
 #include <string>
 #include <vector>
 #include <pqxx/pqxx>
+#include <optional>
 
 /**
- * @brief Простая доменная сущность, которую возвращает репозиторий.
- *
- * Пока содержит лишь идентификатор и имя пользователя. При расширении
- * схемы БД сюда можно добавить новые поля (email, avatar и т.д.).
+ * @brief Пользователь с email и хэшем пароля
+ * id — идентификатор; username — отображаемое имя; email — почта для входа;
+ * password_hash — хэш пароля (bcrypt).
  */
 struct User {
     int id;
     std::string username;
+    std::string email;
+    std::string password_hash;
 };
 
 /**
@@ -42,6 +44,21 @@ public:
      * Используется RETURNING, чтобы получить значение без повторного SELECT.
      */
     int createUser(const std::string& username);
+
+    /**
+     * @brief Найти пользователя по email
+     * @param email — адрес электронной почты
+     * @return User если найден, иначе std::nullopt
+     */
+    std::optional<User> findByEmail(const std::string& email);
+    /**
+     * @brief Добавить пользователя с email и хэшем пароля
+     * @param username — имя пользователя
+     * @param email — email для входа
+     * @param password_hash — bcrypt хэш пароля
+     * @return id пользователя
+     */
+    int createUser(const std::string& username, const std::string& email, const std::string& password_hash);
 
 private:
     /// Ссылка на общую pqxx-коннекцию; владеет ей объект Database.

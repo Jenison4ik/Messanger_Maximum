@@ -32,10 +32,10 @@ int main() {
     CROW_ROUTE(app, "/users").methods("POST"_method)
     ([&users](const crow::request& req) {
         auto body = crow::json::load(req.body);
-        if (!body || !body.has("username"))
+        if (!body || !body.has("username") || !body.has("email") || !body.has("password"))
             return crow::response(400);
 
-        int id = users.createUser(body["username"].s());
+        int id = users.createUser(body["username"].s(), body["email"].s(), body["password"].s());
         return crow::response(200, "Created user id = " + std::to_string(id));
     });
 

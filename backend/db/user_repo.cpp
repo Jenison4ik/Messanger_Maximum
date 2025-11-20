@@ -1,4 +1,5 @@
 #include "user_repo.h"
+#include <optional>
 
 UserRepository::UserRepository(pqxx::connection& conn) : db(conn) {}
 
@@ -21,16 +22,34 @@ std::vector<User> UserRepository::getAllUsers() {
     return users;
 }
 
-int UserRepository::createUser(const std::string& username) {
+// Поиск пользователя по email: возвращает std::optional<User>, если пользователь найден
+std::optional<User> UserRepository::findByEmail(const std::string& email) {
     pqxx::work txn(db);
-
-    // Используем параметризованный запрос для защиты от SQL-инъекций.
+    // Выполняем выборку по email
     auto result = txn.exec_params(
-        "INSERT INTO users (username) VALUES ($1) RETURNING id;",
-        username
+        "SELECT id, username, email, password_hash FROM users WHERE email = $1 LIMIT 1;",
+        email
     );
+    if (result.empty()) return std::nullopt;
+    const auto& row = result[0];
+    User user{
+        row["id"].as<int>(),
+        row["username"].c_str(),
+        row["email"].c_str(),
+        row["password_hash"].c_str(),
+    };
+    return user;
+}
 
-    int id = result[0]["id"].as<int>();  // В новой строке всегда будет ровно один id.
+// Создание пользователя с email и хэшем пароля
+int UserRepository::createUser(const std::string& username, const std::string& email, const std::string& password_hash) {
+    pqxx::work txn(db);
+    // Используем параметризованный запрос для безопасности
+    auto result = txn.exec_params(
+        "INSERT INTO users (username, email, password_hash) VALUES ($1, $2, $3) RETURNING id;",
+        username, email, password_hash
+    );
+    int id = result[0]["id"].as<int>();
     txn.commit();
     return id;
 }

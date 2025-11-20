@@ -24,7 +24,7 @@ Makefile
 .idea/
 .vscode/
 *.iml
-
+c_cpp_properties.json
 
 # Файлы тестовой генерации
 *.seed
