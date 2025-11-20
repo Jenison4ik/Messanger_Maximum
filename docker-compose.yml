@@ -2,4 +2,6 @@ services:
   backend:
     build: ./backend
     ports:
-      - "18080:18080"
+      - "8080:${PORT}"
+    env_file:
+      - .env

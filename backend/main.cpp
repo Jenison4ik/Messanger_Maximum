@@ -1,4 +1,6 @@
 #include "crow.h"
+#include <cstdlib>
+#include <string>
 
 int main()
 {
@@ -19,5 +21,9 @@ int main()
         return page;
     });
 
-    app.port(18080).multithreaded().run();
+    // Получаем порт из переменной окружения, по умолчанию 8080
+    const char* port_env = std::getenv("PORT");
+    int port = port_env ? std::stoi(port_env) : 8080;
+    
+    app.port(port).multithreaded().run();
 }
