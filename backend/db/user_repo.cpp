@@ -42,12 +42,12 @@ std::optional<User> UserRepository::findByEmail(const std::string& email) {
 }
 
 // Создание пользователя с email и хэшем пароля
-int UserRepository::createUser(const std::string& username, const std::string& email, const std::string& password_hash) {
+int UserRepository::createUser(const std::string& username, const std::string& user, const std::string& email, const std::string& password_hash) {
     pqxx::work txn(db);
     // Используем параметризованный запрос для безопасности
     auto result = txn.exec_params(
-        "INSERT INTO users (username, email, password_hash) VALUES ($1, $2, $3) RETURNING id;",
-        username, email, password_hash
+        "INSERT INTO users (username, \"user\", email, password_hash) VALUES ($1, $2, $3, $4) RETURNING id;",
+        username, user, email, password_hash
     );
     int id = result[0]["id"].as<int>();
     txn.commit();

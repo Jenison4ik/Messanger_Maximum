@@ -24,7 +24,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=build /app/build/main /usr/local/bin/messanger
-COPY templates ./templates
 
 EXPOSE 18080
 CMD ["messanger"]

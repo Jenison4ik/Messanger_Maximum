@@ -54,11 +54,12 @@ public:
     /**
      * @brief Добавить пользователя с email и хэшем пароля
      * @param username — имя пользователя
+     * @param user — имя пользователя для входа
      * @param email — email для входа
      * @param password_hash — bcrypt хэш пароля
      * @return id пользователя
      */
-    int createUser(const std::string& username, const std::string& email, const std::string& password_hash);
+    int createUser(const std::string& username, const std::string& user, const std::string& email, const std::string& password_hash);
 
 private:
     /// Ссылка на общую pqxx-коннекцию; владеет ей объект Database.

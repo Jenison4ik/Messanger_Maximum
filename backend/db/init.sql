@@ -1,8 +1,7 @@
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
-    username TEXT NOT NULL UNIQUE
+    "user" TEXT NOT NULL,
+    username TEXT NOT NULL UNIQUE,
+    email TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL
 );
-
-ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT UNIQUE;
-ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash TEXT;
-

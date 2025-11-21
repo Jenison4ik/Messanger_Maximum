@@ -32,12 +32,39 @@ int main() {
     CROW_ROUTE(app, "/users").methods("POST"_method)
     ([&users](const crow::request& req) {
         auto body = crow::json::load(req.body);
-        if (!body || !body.has("username") || !body.has("email") || !body.has("password"))
-            return crow::response(400);
+        if (!body || !body.has("username") || !body.has("email") ||
+            !body.has("password") || !body.has("user")) {
+            return crow::response(400, "missing fields");
+        }
 
-        int id = users.createUser(body["username"].s(), body["email"].s(), body["password"].s());
-        return crow::response(200, "Created user id = " + std::to_string(id));
+        try {
+            int id = users.createUser(body["username"].s(),
+                                    body["user"].s(),
+                                    body["email"].s(),
+                                    body["password"].s());
+            crow::json::wvalue ok;
+            ok["id"] = id;
+            return crow::response(201, ok);
+        } catch (const pqxx::unique_violation& e) {
+            std::string duplicate_value;
+            const std::string constraint = e.what();
+            if (constraint.find("(username)") != std::string::npos) {
+                duplicate_value = "username";
+            } else if (constraint.find("(email)") != std::string::npos) {
+                duplicate_value = "email";
+            }
+
+            crow::json::wvalue err;
+            err["error"] = "duplicate value";
+            err["detail"] = e.what();
+            if (!duplicate_value.empty()) {
+                err["dublicate"] = duplicate_value;
+            }
+            return crow::response(409, err);
+        } catch (const std::exception& e) {
+            return crow::response(500, e.what());
+        }
     });
 
-    app.port(8080).run();
+    app.port(8080).multithreaded().run();
 }
