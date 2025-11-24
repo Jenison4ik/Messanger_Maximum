@@ -11,6 +11,7 @@
  */
 struct User {
     int id;
+    std::string name;
     std::string username;
     std::string email;
     std::string password_hash;
@@ -53,13 +54,13 @@ public:
     std::optional<User> findByEmail(const std::string& email);
     /**
      * @brief Добавить пользователя с email и хэшем пароля
-     * @param username — имя пользователя
-     * @param user — имя пользователя для входа
+     * @param name — имя пользователя
+     * @param username — идентификатор пользователя
      * @param email — email для входа
      * @param password_hash — bcrypt хэш пароля
      * @return id пользователя
      */
-    int createUser(const std::string& username, const std::string& user, const std::string& email, const std::string& password_hash);
+    int createUser(const std::string& name, const std::string& username, const std::string& email, const std::string& password_hash);
 
 private:
     /// Ссылка на общую pqxx-коннекцию; владеет ей объект Database.

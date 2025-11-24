@@ -34,6 +34,7 @@ std::optional<User> UserRepository::findByEmail(const std::string& email) {
     const auto& row = result[0];
     User user{
         row["id"].as<int>(),
+        row["name"].c_str(),
         row["username"].c_str(),
         row["email"].c_str(),
         row["password_hash"].c_str(),
@@ -41,13 +42,12 @@ std::optional<User> UserRepository::findByEmail(const std::string& email) {
     return user;
 }
 
-// Создание пользователя с email и хэшем пароля
-int UserRepository::createUser(const std::string& username, const std::string& user, const std::string& email, const std::string& password_hash) {
+// Добавить пользователя с email и хэшем пароля
+int UserRepository::createUser(const std::string& name, const std::string& username, const std::string& email, const std::string& password_hash) {
     pqxx::work txn(db);
-    // Используем параметризованный запрос для безопасности
     auto result = txn.exec_params(
-        "INSERT INTO users (username, \"user\", email, password_hash) VALUES ($1, $2, $3, $4) RETURNING id;",
-        username, user, email, password_hash
+        "INSERT INTO users (name, username, email, password_hash) VALUES ($1, $2, $3, $4) RETURNING id;",
+        name, username, email, password_hash
     );
     int id = result[0]["id"].as<int>();
     txn.commit();
