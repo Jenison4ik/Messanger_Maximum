@@ -4,7 +4,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     cmake \
     libasio-dev \
+    git \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
+RUN update-ca-certificates
     
 RUN apt-get update && apt-get install -y libpq-dev libpqxx-dev
 

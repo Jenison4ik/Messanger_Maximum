@@ -3,7 +3,7 @@
 #include "db/connection.h"
 #include "db/user_repo.h"
 #include <pqxx/except.hxx>
-#include "jwt-cpp/include/jwt-cpp/jwt.h"
+#include <jwt-cpp/jwt.h>
 
 int main() {
     crow::SimpleApp app;

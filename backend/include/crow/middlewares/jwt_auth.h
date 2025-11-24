@@ -2,7 +2,7 @@
 #include <string>
 #include <optional>
 #include <crow.h>
-#include "jwt-cpp/include/jwt-cpp/jwt.h"
+#include <jwt-cpp/jwt.h>
 
 namespace crow {
 namespace jwt_auth {
