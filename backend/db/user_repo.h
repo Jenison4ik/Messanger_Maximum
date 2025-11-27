@@ -53,6 +53,12 @@ public:
      */
     std::optional<User> findByEmail(const std::string& email);
     /**
+     * @brief Найти пользователя по username
+     * @param username — уникальный username
+     * @return User если найден, иначе std::nullopt
+     */
+    std::optional<User> findByUsername(const std::string& username);
+    /**
      * @brief Найти пользователя по идентификатору
      * @param id — идентификатор пользователя
      * @return User если найден, иначе std::nullopt
@@ -67,6 +73,13 @@ public:
      * @return id пользователя
      */
     int createUser(const std::string& name, const std::string& username, const std::string& email, const std::string& password_hash);
+
+    /**
+     * @brief Поиск пользователей по имени (ILIKE)
+     * @param needle — часть имени
+     * @param limit — максимум записей
+     */
+    std::vector<User> searchByName(const std::string& needle, int limit);
 
 private:
     /// Ссылка на общую pqxx-коннекцию; владеет ей объект Database.

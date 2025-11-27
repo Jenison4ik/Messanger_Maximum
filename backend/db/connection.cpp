@@ -1,4 +1,5 @@
 #include "connection.h"
+#include <pqxx/pqxx>
 #include <cstdlib>
 #include <iostream>
 

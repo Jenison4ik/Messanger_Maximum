@@ -47,6 +47,24 @@ std::optional<User> UserRepository::findByEmail(const std::string& email) {
     return user;
 }
 
+std::optional<User> UserRepository::findByUsername(const std::string& username) {
+    pqxx::work txn(db);
+    auto result = txn.exec_params(
+        "SELECT id, name, username, email, password_hash FROM users WHERE username = $1 LIMIT 1;",
+        username
+    );
+    if (result.empty()) return std::nullopt;
+    const auto& row = result[0];
+    User user{
+        row["id"].as<int>(),
+        row["name"].c_str(),
+        row["username"].c_str(),
+        row["email"].c_str(),
+        row["password_hash"].c_str(),
+    };
+    return user;
+}
+
 // Поиск пользователя по id
 std::optional<User> UserRepository::findById(int id) {
     pqxx::work txn(db);
@@ -76,4 +94,27 @@ int UserRepository::createUser(const std::string& name, const std::string& usern
     int id = result[0]["id"].as<int>();
     txn.commit();
     return id;
+}
+
+std::vector<User> UserRepository::searchByName(const std::string& needle, int limit) {
+    pqxx::work txn(db);
+    auto result = txn.exec_params(
+        "SELECT id, name, username, email FROM users WHERE name ILIKE '%' || $1 || '%' ORDER BY name LIMIT $2;",
+        needle,
+        limit
+    );
+    txn.commit();
+
+    std::vector<User> users;
+    users.reserve(result.size());
+    for (const auto& row : result) {
+        users.push_back(User{
+            row["id"].as<int>(),
+            row["name"].c_str(),
+            row["username"].c_str(),
+            row["email"].c_str(),
+            ""
+        });
+    }
+    return users;
 }

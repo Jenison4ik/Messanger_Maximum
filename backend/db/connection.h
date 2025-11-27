@@ -1,5 +1,5 @@
 #pragma once
-#include <pqxx/pqxx>
+#include "pqxx_fwd.h"
 
 /**
  * @brief Обёртка над соединением PQXX.

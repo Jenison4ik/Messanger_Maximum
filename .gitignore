@@ -43,3 +43,6 @@ main
 
 #Переменные окружения
 .env
+
+#frontend
+node_modules
