@@ -35,6 +35,7 @@ add_executable(main
     main.cpp
     db/connection.cpp
     db/user_repo.cpp
+    db/chat_repo.cpp
 )
 
 target_include_directories(main PRIVATE

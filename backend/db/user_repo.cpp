@@ -1,4 +1,5 @@
 #include "user_repo.h"
+#include <pqxx/pqxx>
 #include <optional>
 
 UserRepository::UserRepository(pqxx::connection& conn) : db(conn) {}
@@ -9,14 +10,18 @@ std::vector<User> UserRepository::getAllUsers() {
     pqxx::work txn(db);
 
     // Простое чтение всех строк. Здесь можно добавить ORDER BY/WHERE позже.
-    auto result = txn.exec("SELECT id, username FROM users");
+    auto result = txn.exec("SELECT id, name, username, email FROM users ORDER BY username");
     txn.commit();
 
     std::vector<User> users;
-    for (auto row : result) {
+    users.reserve(result.size());
+    for (const auto& row : result) {
         users.push_back(User{
-            row["id"].as<int>(),          // Конвертируем значение столбца в int.
-            row["username"].c_str()       // c_str() создаёт std::string.
+            row["id"].as<int>(),
+            row["name"].c_str(),
+            row["username"].c_str(),
+            row["email"].c_str(),
+            "" // пароль не нужен для публичного списка
         });
     }
     return users;
@@ -27,8 +32,27 @@ std::optional<User> UserRepository::findByEmail(const std::string& email) {
     pqxx::work txn(db);
     // Выполняем выборку по email
     auto result = txn.exec_params(
-        "SELECT id, username, email, password_hash FROM users WHERE email = $1 LIMIT 1;",
+        "SELECT id, name, username, email, password_hash FROM users WHERE email = $1 LIMIT 1;",
         email
+    );
+    if (result.empty()) return std::nullopt;
+    const auto& row = result[0];
+    User user{
+        row["id"].as<int>(),
+        row["name"].c_str(),
+        row["username"].c_str(),
+        row["email"].c_str(),
+        row["password_hash"].c_str(),
+    };
+    return user;
+}
+
+// Поиск пользователя по id
+std::optional<User> UserRepository::findById(int id) {
+    pqxx::work txn(db);
+    auto result = txn.exec_params(
+        "SELECT id, name, username, email, password_hash FROM users WHERE id = $1 LIMIT 1;",
+        id
     );
     if (result.empty()) return std::nullopt;
     const auto& row = result[0];

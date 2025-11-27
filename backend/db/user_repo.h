@@ -1,8 +1,8 @@
 #pragma once
 #include <string>
 #include <vector>
-#include <pqxx/pqxx>
 #include <optional>
+#include "pqxx_fwd.h"
 
 /**
  * @brief Пользователь с email и хэшем пароля
@@ -52,6 +52,12 @@ public:
      * @return User если найден, иначе std::nullopt
      */
     std::optional<User> findByEmail(const std::string& email);
+    /**
+     * @brief Найти пользователя по идентификатору
+     * @param id — идентификатор пользователя
+     * @return User если найден, иначе std::nullopt
+     */
+    std::optional<User> findById(int id);
     /**
      * @brief Добавить пользователя с email и хэшем пароля
      * @param name — имя пользователя

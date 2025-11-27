@@ -22,6 +22,18 @@ docker compose up -d --build
 docker build -t messanger-backend backend
 ```
 
+### Локальная сборка (Windows / MinGW)
+
+Если хотите собирать без Docker, установите MSYS2 с комплектом `mingw-w64` и пакеты `mingw-w64-x86_64-libpqxx`, `mingw-w64-x86_64-postgresql`.  
+Далее:
+
+```powershell
+cmake -S backend -B backend/build -G "MinGW Makefiles"
+mingw32-make -C backend/build
+```
+
+Для запуска сервера используйте `backend/build/main.exe`.
+
 ### Запуск бэкенда
 
 Из `./backend`:
@@ -29,3 +41,11 @@ docker build -t messanger-backend backend
 ```bash
 docker run --rm -p 18080:18080 messanger-backend
 ```
+
+## API подсказки
+
+- `POST /users` — регистрация, в ответе приходит JWT.
+- `POST /auth/login` — вход по email/паролю.
+- `GET /users` — список пользователей (нужен заголовок `Authorization: Bearer <token>`).
+- `WS /ws/chat` — WebSocket-канал; сначала отправьте заголовок `Authorization: Bearer <token>`. Сообщения отправляются JSON-объектом `{"recipient_id":2,"text":"привет"}` и сохраняются в БД.
+- `GET /chats/<recipient_id>/messages?limit=50&before_id=123` — получить историю диалога с пользователем. Возвращаются сохранённые сообщения, упорядоченные по времени.
