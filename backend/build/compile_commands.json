@@ -1,0 +1,20 @@
+[
+{
+  "directory": "E:/develop/messanger/Messanger/backend/build",
+  "command": "C:\\msys64\\mingw64\\bin\\c++.exe  @CMakeFiles/main.dir/includes_CXX.rsp -O3 -DNDEBUG -std=c++17 -o CMakeFiles\\main.dir\\main.cpp.obj -c E:\\develop\\messanger\\Messanger\\backend\\main.cpp",
+  "file": "E:/develop/messanger/Messanger/backend/main.cpp",
+  "output": "CMakeFiles/main.dir/main.cpp.obj"
+},
+{
+  "directory": "E:/develop/messanger/Messanger/backend/build",
+  "command": "C:\\msys64\\mingw64\\bin\\c++.exe  @CMakeFiles/main.dir/includes_CXX.rsp -O3 -DNDEBUG -std=c++17 -o CMakeFiles\\main.dir\\db\\connection.cpp.obj -c E:\\develop\\messanger\\Messanger\\backend\\db\\connection.cpp",
+  "file": "E:/develop/messanger/Messanger/backend/db/connection.cpp",
+  "output": "CMakeFiles/main.dir/db/connection.cpp.obj"
+},
+{
+  "directory": "E:/develop/messanger/Messanger/backend/build",
+  "command": "C:\\msys64\\mingw64\\bin\\c++.exe  @CMakeFiles/main.dir/includes_CXX.rsp -O3 -DNDEBUG -std=c++17 -o CMakeFiles\\main.dir\\db\\user_repo.cpp.obj -c E:\\develop\\messanger\\Messanger\\backend\\db\\user_repo.cpp",
+  "file": "E:/develop/messanger/Messanger/backend/db/user_repo.cpp",
+  "output": "CMakeFiles/main.dir/db/user_repo.cpp.obj"
+}
+]

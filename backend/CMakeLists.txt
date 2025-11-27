@@ -1,5 +1,18 @@
+set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
 cmake_minimum_required(VERSION 3.16)
 project(Messanger LANGUAGES CXX)
+
+if(MINGW)
+    set(_default_msys_prefix "C:/msys64/mingw64")
+    if(NOT DEFINED OPENSSL_ROOT_DIR AND EXISTS "${_default_msys_prefix}/include/openssl/ssl.h")
+        set(OPENSSL_ROOT_DIR "${_default_msys_prefix}" CACHE PATH "OpenSSL root (auto-detected for MSYS2)" FORCE)
+    endif()
+    if(DEFINED OPENSSL_ROOT_DIR)
+        list(APPEND CMAKE_PREFIX_PATH "${OPENSSL_ROOT_DIR}")
+    endif()
+endif()
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -39,6 +52,6 @@ target_link_libraries(main PRIVATE
 )
 
 if (WIN32)
-    target_link_libraries(main ws2_32 wsock32)
+    target_link_libraries(main PRIVATE ws2_32 wsock32)
 endif()
 

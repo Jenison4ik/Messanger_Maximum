@@ -47,7 +47,7 @@ int main() {
             // Генерируем JWT для нового пользователя
             auto token = jwt::create()
                 .set_issuer("messanger-api")
-                .set_type("JWS")
+                .set_type("JWS") 
                 .set_payload_claim("user_id", jwt::claim(std::to_string(id)))
                 .set_payload_claim("username", jwt::claim(body["username"].s()))
                 .sign(jwt::algorithm::hs256{"SIMPLE_SECRET"});
