@@ -143,6 +143,8 @@ export class WebSocketService {
         sender_id: msg.sender_id,
         text: msg.text,
         time: msg.time,
+        sender_username: msg.sender_username,
+        sender_name: msg.sender_name,
       }));
       this.historyHandlers.forEach((handler) => handler(messages));
       return;
@@ -169,7 +171,8 @@ export class WebSocketService {
       const message: Message = {
         id: rawData.message_id || 0,
         chat_id: rawData.chat_id || 0,
-        sender_id: 0, // Отправитель - текущий пользователь
+        // Если сервер присылает поле `from`, используем его, иначе берём id из cookie
+        sender_id: rawData.from || parseInt(Cookies.get("id") || "0"),
         text: rawData.text || "",
         time: rawData.time || new Date().toISOString(),
       };
@@ -189,6 +192,12 @@ export class WebSocketService {
   }
 
   send(message: WebSocketMessage) {
+    console.log(
+      "ws.send called, ws readyState:",
+      this.ws?.readyState,
+      "message:",
+      message
+    );
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       const messageStr = JSON.stringify(message);
       console.log("WebSocket sending:", message, "as string:", messageStr);
@@ -204,6 +213,11 @@ export class WebSocketService {
   }
 
   sendMessage(recipientUsername: string, text: string) {
+    console.log("sendMessage called", {
+      recipientUsername,
+      text,
+      wsState: this.ws?.readyState,
+    });
     this.send({
       type: "message",
       recipient_username: recipientUsername,

@@ -45,7 +45,7 @@ export async function registerUser(
 export async function loginUser(
   email: string,
   password: string
-): Promise<{ token: string }> {
+): Promise<{ token: string; user_id: string }> {
   const response = await fetch(`${API_BASE}/auth/login`, {
     method: "POST",
     headers: {
@@ -70,6 +70,11 @@ export async function loginUser(
   }
 
   return response.json();
+}
+
+export async function getMyData(): Promise<string | undefined> {
+  const id = Cookies.get("id");
+  return id;
 }
 
 export async function getUsers(): Promise<User[]> {

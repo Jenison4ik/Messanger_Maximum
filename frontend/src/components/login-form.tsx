@@ -28,7 +28,7 @@ export function LoginForm({
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { setToken } = useAuth();
+  const { setToken, setId } = useAuth();
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -36,8 +36,10 @@ export function LoginForm({
     setLoading(true);
 
     try {
-      const { token } = await loginUser(email, password);
-      setToken(token);
+      const user = await loginUser(email, password);
+      console.log("Login successful, received data:", user);
+      setToken(user.token);
+      setId(user.user_id);
       navigate("/messenger");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ошибка входа");

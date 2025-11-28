@@ -9,15 +9,20 @@ import type { ReactNode } from "react";
 import Cookies from "js-cookie";
 import { useNavigate } from "react-router";
 import type { User } from "@/types";
-import { getUsers } from "@/services/api";
+import { getMyData } from "@/services/api";
 
 interface AuthContextType {
   user: User | null;
-  isAuthenticated: boolean;
-  token: string | null;
-  setToken: (token: string | null) => void;
-  logout: () => void;
   currentUser: User | null;
+  isAuthenticated: boolean;
+
+  token: string | null;
+  id: string | null;
+
+  setToken: (token: string | null) => void;
+  setId: (id: string | null) => void;
+
+  logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -26,16 +31,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setTokenState] = useState<string | null>(
     Cookies.get("token") || null
   );
+  const [id, setIdState] = useState<string | null>(Cookies.get("id") || null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+
   const navigate = useNavigate();
 
   const loadCurrentUser = useCallback(async () => {
     try {
-      const users = await getUsers();
-      // Предполагаем, что текущий пользователь - это первый в списке или делаем отдельный эндпоинт
-      // Для простоты берем первого пользователя (в реальности нужен эндпоинт /users/me)
-      if (users.length > 0) {
-        setCurrentUser(users[0]);
+      const id = await getMyData();
+      if (id) {
+        setCurrentUser({ id: parseInt(id), username: id, name: "", email: "" });
       }
     } catch (error) {
       console.error("Ошибка загрузки текущего пользователя:", error);
@@ -44,8 +49,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const savedToken = Cookies.get("token");
+    const savedId = Cookies.get("id");
+
     if (savedToken) {
       setTokenState(savedToken);
+      if (savedId) setIdState(savedId);
       loadCurrentUser();
     }
   }, [loadCurrentUser]);
@@ -62,8 +70,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const setId = (newId: string | null) => {
+    if (newId) {
+      Cookies.set("id", newId);
+      setIdState(newId);
+    } else {
+      Cookies.remove("id");
+      setIdState(null);
+    }
+  };
+
   const logout = () => {
     setToken(null);
+    setId(null);
     navigate("/");
   };
 
@@ -73,8 +92,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user: currentUser,
         currentUser,
         isAuthenticated: !!token,
+
         token,
+        id,
+
         setToken,
+        setId,
+
         logout,
       }}
     >

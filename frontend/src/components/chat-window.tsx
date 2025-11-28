@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,118 +19,47 @@ export function ChatWindow({ chat, onChatUpdate }: ChatWindowProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { currentUser } = useAuth();
+  const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scrollHeightBeforePaginationRef = useRef(0);
 
-  useEffect(() => {
-    if (chat) {
-      loadMessages();
-    } else {
-      setMessages([]);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chat]);
-
-  useEffect(() => {
-    // Подписываемся на новые сообщения
-    const unsubscribeMessage = wsService.onMessage((message: Message) => {
-      if (chat) {
-        // Проверяем, относится ли сообщение к текущему чату
-        const isCurrentChat =
-          message.chat_id === chat.id ||
-          (!chat.id &&
-            (message.sender_id === chat.user2_id ||
-              message.sender_id === chat.user1_id));
-
-        if (isCurrentChat) {
-          setMessages((prev) => {
-            // Проверяем, нет ли уже такого сообщения (по ID или по временному ID)
-            const existingIndex = prev.findIndex(
-              (m) =>
-                m.id === message.id ||
-                (m.id > 1000000000000 && // Временный ID (timestamp)
-                  Math.abs(
-                    new Date(m.time).getTime() -
-                      new Date(message.time).getTime()
-                  ) < 1000 &&
-                  m.text === message.text)
-            );
-
-            if (existingIndex >= 0) {
-              // Заменяем временное сообщение на реальное
-              const updated = [...prev];
-              updated[existingIndex] = message;
-              return updated.sort(
-                (a, b) =>
-                  new Date(a.time).getTime() - new Date(b.time).getTime()
-              );
-            }
-
-            return [...prev, message].sort(
-              (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime()
-            );
-          });
-          scrollToBottom();
-        }
+  // Коллбэк для прокрутки вниз
+  const scrollToBottom = useCallback(() => {
+    setTimeout(() => {
+      const viewport = scrollAreaRef.current?.querySelector(
+        "[data-radix-scroll-area-viewport]"
+      ) as HTMLElement;
+      if (viewport) {
+        viewport.scrollTop = viewport.scrollHeight;
       }
-    });
+    }, 50);
+  }, []);
 
-    // Подписываемся на историю сообщений
-    const unsubscribeHistory = wsService.onHistory(
-      (historyMessages: Message[]) => {
-        if (chat) {
-          // Обновляем chat_id для нового чата, если он был получен
-          const sortedMessages = historyMessages.sort(
-            (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime()
-          );
-
-          // Если у чата нет id, но в сообщениях есть chat_id, обновляем чат
-          if (
-            !chat.id &&
-            sortedMessages.length > 0 &&
-            sortedMessages[0].chat_id &&
-            onChatUpdate
-          ) {
-            const updatedChat = { ...chat, id: sortedMessages[0].chat_id };
-            onChatUpdate(updatedChat);
-          }
-
-          setMessages(sortedMessages);
-          scrollToBottom();
-          setLoading(false);
-        }
-      }
-    );
-
-    return () => {
-      unsubscribeMessage();
-      unsubscribeHistory();
-    };
-  }, [chat]);
-
-  const loadMessages = () => {
+  // Коллбэк для загрузки сообщений
+  const loadMessages = useCallback(() => {
     if (!chat) return;
 
+    console.log("ChatWindow: загружаем сообщения");
     setLoading(true);
 
-    // Запрашиваем историю через WebSocket
-    const requestHistory = () => {
+    const doRequest = () => {
       if (wsService.isConnected()) {
         if (chat.id && chat.id > 0) {
-          // Запрашиваем историю по chat_id
+          console.log("ChatWindow: запрос по chat_id", chat.id);
           wsService.requestHistoryByChat(chat.id, 50);
         } else {
-          // Запрашиваем историю по username
           const username = chat.user1_username || chat.user2_username;
           if (username) {
+            console.log("ChatWindow: запрос по username", username);
             wsService.requestHistoryWithUser(username, 50);
           } else {
             setLoading(false);
           }
         }
       } else {
-        // Если WebSocket еще не подключен, ждем подключения
-        const checkConnection = setInterval(() => {
+        const timer = setInterval(() => {
           if (wsService.isConnected()) {
             if (chat.id && chat.id > 0) {
               wsService.requestHistoryByChat(chat.id, 50);
@@ -140,33 +69,278 @@ export function ChatWindow({ chat, onChatUpdate }: ChatWindowProps) {
                 wsService.requestHistoryWithUser(username, 50);
               }
             }
-            clearInterval(checkConnection);
+            clearInterval(timer);
           }
         }, 100);
 
-        // Очищаем интервал через 5 секунд
         setTimeout(() => {
-          clearInterval(checkConnection);
+          clearInterval(timer);
           setLoading(false);
         }, 5000);
       }
     };
 
-    requestHistory();
-  };
+    doRequest();
+  }, [chat]);
 
-  const scrollToBottom = () => {
-    setTimeout(() => {
-      if (scrollAreaRef.current) {
-        const scrollContainer = scrollAreaRef.current.querySelector(
-          "[data-radix-scroll-area-viewport]"
-        );
-        if (scrollContainer) {
-          scrollContainer.scrollTop = scrollContainer.scrollHeight;
+  // EFFECT 1: Переключение чата
+  useEffect(() => {
+    if (chat) {
+      console.log("ChatWindow: смена чата");
+      setMessages([]);
+      setLoading(true);
+      setLoadingOlder(false);
+      loadMessages();
+    } else {
+      setMessages([]);
+    }
+  }, [chat?.id, chat?.user2_id, loadMessages]);
+
+  // EFFECT 1b: Прокрутка в низ при загрузке сообщений
+  useEffect(() => {
+    if (!loading && messages.length > 0) {
+      console.log("ChatWindow: загрузка завершена, прокручиваем в низ");
+      scrollToBottom();
+    }
+  }, [loading, messages.length, scrollToBottom]);
+
+  // EFFECT 1c: Восстановление позиции скролла при пагинации
+  useEffect(() => {
+    if (!loadingOlder) return;
+
+    // Небольшая задержка для рендеринга новых сообщений
+    const timer = setTimeout(() => {
+      const viewport = scrollAreaRef.current?.querySelector(
+        "[data-radix-scroll-area-viewport]"
+      ) as HTMLElement;
+
+      if (viewport && scrollHeightBeforePaginationRef.current > 0) {
+        // Вычисляем разницу в высоте
+        const scrollContent = viewport.querySelector(
+          "[style*='transform']"
+        )?.parentElement;
+        if (scrollContent) {
+          const newHeight = scrollContent.scrollHeight;
+          const heightDifference =
+            newHeight - scrollHeightBeforePaginationRef.current;
+
+          // Восстанавливаем позицию скролла, добавив разницу в высоте
+          viewport.scrollTop += heightDifference;
+          console.log(
+            "ChatWindow: восстановлена позиция скролла, разница:",
+            heightDifference
+          );
         }
+        scrollHeightBeforePaginationRef.current = 0;
       }
     }, 100);
-  };
+
+    return () => clearTimeout(timer);
+  }, [loadingOlder]);
+
+  // EFFECT 2: WebSocket подписки
+  useEffect(() => {
+    if (!chat) return;
+
+    console.log("ChatWindow: устанавливаем WebSocket подписки");
+
+    const unsubscribeMessage = wsService.onMessage((message: Message) => {
+      const isCurrentChat =
+        message.chat_id === chat.id ||
+        (!chat.id &&
+          (message.sender_id === chat.user2_id ||
+            message.sender_id === chat.user1_id));
+
+      if (isCurrentChat) {
+        console.log("ChatWindow: новое сообщение", message.id, message.text);
+        setMessages((prev) => {
+          const existingIndex = prev.findIndex(
+            (m) =>
+              m.id === message.id ||
+              (m.id > 1000000000000 &&
+                Math.abs(
+                  new Date(m.time).getTime() - new Date(message.time).getTime()
+                ) < 1000 &&
+                m.text === message.text)
+          );
+
+          let updated: Message[] = prev;
+          if (existingIndex >= 0) {
+            updated = [...prev];
+            updated[existingIndex] = message;
+          } else {
+            updated = [...prev, message];
+          }
+
+          const sorted = updated.sort(
+            (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime()
+          );
+
+          if (onChatUpdate && sorted.length > 0) {
+            const lastMsg = sorted[sorted.length - 1];
+            const updatedChat: Chat = {
+              ...chat,
+              last_message_text: lastMsg.text,
+              last_message_time: lastMsg.time,
+            };
+            onChatUpdate(updatedChat);
+          }
+
+          return sorted;
+        });
+        scrollToBottom();
+      }
+    });
+
+    const unsubscribeHistory = wsService.onHistory(
+      (historyMessages: Message[]) => {
+        if (historyMessages.length === 0) {
+          setLoading(false);
+          setLoadingOlder(false);
+          return;
+        }
+
+        const sortedMessages = historyMessages.sort(
+          (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime()
+        );
+
+        setMessages((prev) => {
+          // НАЧАЛЬНАЯ ЗАГРУЗКА
+          if (prev.length === 0) {
+            console.log(
+              "ChatWindow: начальная загрузка",
+              sortedMessages.length
+            );
+
+            if (
+              !chat.id &&
+              sortedMessages.length > 0 &&
+              sortedMessages[0].chat_id &&
+              onChatUpdate
+            ) {
+              const updatedChat = {
+                ...chat,
+                id: sortedMessages[0].chat_id,
+              };
+              onChatUpdate(updatedChat);
+            }
+
+            setLoading(false);
+            return sortedMessages;
+          }
+
+          // ПАГИНАЦИЯ
+          console.log(
+            "ChatWindow: пагинация - добавляем",
+            sortedMessages.length,
+            "старых сообщений"
+          );
+
+          const oldestCurrentId = prev[0]?.id || 0;
+          const newestLoadedId =
+            sortedMessages[sortedMessages.length - 1]?.id || 0;
+
+          if (newestLoadedId > 0 && newestLoadedId < oldestCurrentId) {
+            // Сохраняем высоту контента ДО добавления новых сообщений
+            const viewport = scrollAreaRef.current?.querySelector(
+              "[data-radix-scroll-area-viewport]"
+            ) as HTMLElement;
+
+            if (viewport) {
+              const scrollContent = viewport.querySelector(
+                "[style*='transform']"
+              )?.parentElement;
+              if (scrollContent) {
+                scrollHeightBeforePaginationRef.current =
+                  scrollContent.scrollHeight;
+              }
+            }
+
+            const combined = [...sortedMessages, ...prev];
+            const uniqueMessages = combined.reduce((acc: Message[], msg) => {
+              if (!acc.find((m) => m.id === msg.id)) {
+                acc.push(msg);
+              }
+              return acc;
+            }, []);
+
+            setLoadingOlder(false);
+            return uniqueMessages.sort(
+              (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime()
+            );
+          }
+
+          setLoading(false);
+          setLoadingOlder(false);
+          return sortedMessages;
+        });
+      }
+    );
+
+    return () => {
+      console.log("ChatWindow: удаляем WebSocket подписки");
+      unsubscribeMessage();
+      unsubscribeHistory();
+    };
+  }, [chat, onChatUpdate, scrollToBottom]);
+
+  // EFFECT 3: Scroll listener для пагинации
+  useEffect(() => {
+    const viewport = scrollAreaRef.current?.querySelector(
+      "[data-radix-scroll-area-viewport]"
+    ) as HTMLElement;
+
+    if (!viewport) return;
+
+    const handleScroll = () => {
+      // Очищаем предыдущий таймаут
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+
+      // Если пользователь прокрутил в верх (200px от края)
+      if (
+        viewport.scrollTop < 200 &&
+        !loadingOlder &&
+        !loading &&
+        messages.length > 0
+      ) {
+        // Debounce: ждем 300ms после последнего скролла
+        scrollTimeoutRef.current = setTimeout(() => {
+          console.log(
+            "ChatWindow: пользователь в верху, загружаем старые сообщения"
+          );
+          setLoadingOlder(true);
+
+          const oldestMessage = messages[0];
+          if (chat?.id && chat.id > 0) {
+            wsService.requestHistoryByChat(chat.id, 30, oldestMessage.id);
+          } else {
+            const username = chat?.user1_username || chat?.user2_username;
+            if (username) {
+              wsService.requestHistoryWithUser(username, 30, oldestMessage.id);
+            }
+          }
+        }, 300);
+      }
+    };
+
+    viewport.addEventListener("scroll", handleScroll);
+    return () => {
+      viewport.removeEventListener("scroll", handleScroll);
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+    };
+  }, [
+    chat?.id,
+    chat?.user1_username,
+    chat?.user2_username,
+    loadingOlder,
+    loading,
+    messages.length,
+    messages,
+  ]);
 
   const handleSend = () => {
     if (!input.trim() || !chat || !currentUser) return;
@@ -176,9 +350,8 @@ export function ChatWindow({ chat, onChatUpdate }: ChatWindowProps) {
 
     const messageText = input.trim();
 
-    // Оптимистичное обновление - сразу добавляем сообщение в список
     const optimisticMessage: Message = {
-      id: Date.now(), // Временный ID
+      id: Date.now(),
       chat_id: chat.id || 0,
       sender_id: currentUser.id,
       text: messageText,
@@ -187,7 +360,6 @@ export function ChatWindow({ chat, onChatUpdate }: ChatWindowProps) {
     };
 
     setMessages((prev) => {
-      // Проверяем, нет ли уже такого сообщения
       if (prev.some((m) => m.id === optimisticMessage.id)) {
         return prev;
       }
@@ -197,14 +369,9 @@ export function ChatWindow({ chat, onChatUpdate }: ChatWindowProps) {
     });
     scrollToBottom();
 
-    // Очищаем поле ввода
     setInput("");
-
-    // Отправляем сообщение через WebSocket
     wsService.sendMessage(recipientUsername, messageText);
 
-    // Обновляем список чатов после отправки сообщения
-    // Это обновит последнее сообщение в списке чатов
     setTimeout(() => {
       if (wsService.isConnected()) {
         wsService.requestChatList(50, 0);
@@ -247,7 +414,7 @@ export function ChatWindow({ chat, onChatUpdate }: ChatWindowProps) {
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full w-full">
       {/* Header */}
       <div className="p-4 border-b flex items-center gap-3">
         <Avatar>
@@ -259,7 +426,7 @@ export function ChatWindow({ chat, onChatUpdate }: ChatWindowProps) {
       </div>
 
       {/* Messages */}
-      <ScrollArea ref={scrollAreaRef} className="flex-1 p-4">
+      <ScrollArea ref={scrollAreaRef} className="flex-1 p-4 overflow-y-scroll">
         <div className="space-y-4">
           {loading ? (
             <div className="text-center text-muted-foreground">
@@ -270,57 +437,68 @@ export function ChatWindow({ chat, onChatUpdate }: ChatWindowProps) {
               Начните разговор, отправив сообщение
             </div>
           ) : (
-            messages.map((message) => {
-              const isOwn = isOwnMessage(message);
-              const senderName =
-                message.sender_name || message.sender_username || "Неизвестный";
-              return (
-                <div
-                  key={message.id}
-                  className={`flex ${
-                    isOwn ? "justify-end" : "justify-start"
-                  } items-end gap-2`}
-                >
-                  {!isOwn && (
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback className="text-xs">
-                        {senderName.charAt(0).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                  )}
+            <>
+              {loadingOlder && (
+                <div className="text-center text-muted-foreground text-sm">
+                  Загрузка старых сообщений...
+                </div>
+              )}
+              {messages.map((message) => {
+                const isOwn = isOwnMessage(message);
+                const senderName =
+                  message.sender_name ||
+                  message.sender_username ||
+                  "Неизвестный";
+                return (
                   <div
-                    className={`max-w-[70%] rounded-lg px-4 py-2 ${
-                      isOwn
-                        ? "bg-sky-500 text-white rounded-br-none"
-                        : "bg-muted rounded-bl-none"
-                    }`}
+                    key={message.id}
+                    className={`flex ${
+                      isOwn ? "justify-end" : "justify-start"
+                    } items-end gap-2`}
                   >
                     {!isOwn && (
-                      <div className="text-xs font-semibold mb-1 text-muted-foreground">
-                        {senderName}
-                      </div>
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback className="text-xs">
+                          {senderName.charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
                     )}
-                    <div className="break-words">{message.text}</div>
                     <div
-                      className={`text-xs mt-1 ${
-                        isOwn ? "text-white/70" : "text-muted-foreground"
+                      className={`max-w-[70%] rounded-lg px-4 py-2 ${
+                        isOwn
+                          ? "bg-sky-500 text-white rounded-br-none"
+                          : "bg-muted rounded-bl-none"
                       }`}
                     >
-                      {format(new Date(message.time), "HH:mm", { locale: ru })}
+                      {!isOwn && (
+                        <div className="text-xs font-semibold mb-1 text-muted-foreground">
+                          {senderName}
+                        </div>
+                      )}
+                      <div className="wrap-break-word">{message.text}</div>
+                      <div
+                        className={`text-xs mt-1 ${
+                          isOwn ? "text-white/70" : "text-muted-foreground"
+                        }`}
+                      >
+                        {format(new Date(message.time), "HH:mm", {
+                          locale: ru,
+                        })}
+                      </div>
                     </div>
+                    {isOwn && (
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback className="text-xs bg-sky-500 text-white">
+                          {currentUser?.name?.charAt(0).toUpperCase() ||
+                            currentUser?.username?.charAt(0).toUpperCase() ||
+                            "Я"}
+                        </AvatarFallback>
+                      </Avatar>
+                    )}
                   </div>
-                  {isOwn && (
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback className="text-xs bg-sky-500 text-white">
-                        {currentUser?.name?.charAt(0).toUpperCase() ||
-                          currentUser?.username?.charAt(0).toUpperCase() ||
-                          "Я"}
-                      </AvatarFallback>
-                    </Avatar>
-                  )}
-                </div>
-              );
-            })
+                );
+              })}
+            </>
           )}
         </div>
       </ScrollArea>
