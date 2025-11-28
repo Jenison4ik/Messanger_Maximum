@@ -5,11 +5,9 @@
 UserRepository::UserRepository(pqxx::connection& conn) : db(conn) {}
 
 std::vector<User> UserRepository::getAllUsers() {
-    // Открываем транзакцию уровня work (read/write). Она автоматически
-    // отменится, если не вызвать commit() из-за исключения.
     pqxx::work txn(db);
 
-    // Простое чтение всех строк. Здесь можно добавить ORDER BY/WHERE позже.
+
     auto result = txn.exec("SELECT id, name, username, email FROM users ORDER BY username");
     txn.commit();
 
@@ -21,7 +19,7 @@ std::vector<User> UserRepository::getAllUsers() {
             row["name"].c_str(),
             row["username"].c_str(),
             row["email"].c_str(),
-            "" // пароль не нужен для публичного списка
+            "" 
         });
     }
     return users;

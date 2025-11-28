@@ -4,13 +4,37 @@
 
 ## Как запустить проект?
 
-1. Создайте файл `.env` и укажите в нем переменные окружения, шаблон находится в `.env.template`
+### Требования
+
+- Docker
+- Node.js от v22
+- npm от v11
+
+### Сборка Фронтенда
+
+Из корня прописываем
+
+```bash
+cd .\frontend\
+
+#Установка пакетов
+npm install
+
+#Сборка
+npm run build
+```
+
+### Переменные окружения
+
+1. В корне создайте файл `.env` и укажите в нем переменные окружения, шаблон находится в `.env.template`
 
 2. Из корневой директории прописываем:
 
 ```bash
 docker compose up -d --build
 ```
+
+Готово! Мессенджер будет доступен по адресу `http://localhost`
 
 ## Сборка и запуск бэкенда отдельно (рекомендуется собирать всё вместе)
 
@@ -42,7 +66,9 @@ mingw32-make -C backend/build
 docker run --rm -p 18080:18080 messanger-backend
 ```
 
-## API подсказки
+## API Эндпоинты
+
+перед каждым запросо надо добавить `/api`
 
 - `POST /users` — регистрация, в ответе приходит JWT.
 - `POST /auth/login` — вход по email/паролю.
@@ -59,3 +85,5 @@ docker run --rm -p 18080:18080 messanger-backend
 - `GET /chats/<chat_id>/messages?count=50&before_id=123` — быстро получить последние `count` сообщений конкретного чата. Благодаря индексам по `(chat_id, time DESC)` чтение работает с асимптотикой `O(log M + N)`.
 - `GET /users/lookup/<username>` — точный поиск пользователя.
 - `GET /users/search?name=Али&count=10` — эластичный поиск по `name`.
+
+[Лицензия MIT](LICENSE) (c) Solovev Evgeniy Stanislavovich 2025
